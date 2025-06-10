@@ -1,4 +1,5 @@
-"use client"
+"use client";
+
 
 import React from 'react'
 import Navbar from '../Navbar'
@@ -26,19 +27,52 @@ function ResumeForm() {
   const [newTechnicalSkill, setNewTechnicalSkill] = useState("");
   const [newSoftSkill, setNewSoftSkill] = useState("");
   const [usedSkill, setUsedSkill] = useState("");
+  const [loading, setLoading] = useState(false);
 
 
 
   const handleFileChange = async (e) => {
 
     const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      simulateUpload(); // start fake upload
-      
+    if (!file || file.type !== "application/pdf") return;
+
+
+    setSelectedFile(file);
+    simulateUpload(); 
+    setLoading(true); 
+
+  
+    const reader = new FileReader();
+  reader.onload = async () => {
+    const arrayBuffer = reader.result;
+
+    try {
+      const res = await fetch("/api/parseResume", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/pdf",
+        },
+        body: arrayBuffer,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setResumeData(data);
+      } else {
+        console.error("OpenAI parsing error:", data.error);
+      }
+    } catch (err) {
+      console.error("Error uploading resume:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-}
+  reader.readAsArrayBuffer(file);
+};
+
+
+
 
   
   const processFile = (file) => {
@@ -109,7 +143,7 @@ function ResumeForm() {
   };
   
   const removeSkill = (type, index) => {
-    const updated = resumeData.skills[type].filter((_, i) => i !== index);
+    const updated = resumeData?.skills[type].filter((_, i) => i !== index);
     setResumeData((prev) => ({
       ...prev,
       skills: {
@@ -119,7 +153,18 @@ function ResumeForm() {
     }));
   };
   
-  
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -156,7 +201,7 @@ function ResumeForm() {
 const [resumeData, setResumeData] = useState({
   // 1. Personal Information
   personalInfo: {
-    fullName: "",
+    name: "",
     email: "",
     phone: "",
     linkedIn: "",
@@ -328,7 +373,7 @@ const removeItem = (section, index) => {
 
 const handleDeleteExperience=(index)=>{
 
-  const updatedExperience = resumeData.workExperience.filter((elem,idx)=>index!==idx);
+  const updatedExperience = resumeData?.workExperience.filter((elem,idx)=>index!==idx);
 
   setResumeData((prev)=>({
     ...prev,
@@ -339,7 +384,7 @@ const handleDeleteExperience=(index)=>{
 
 const handleDeleteEducation=(index)=>{
 
-  const updatedExperience = resumeData.education.filter((elem,idx)=>index!==idx);
+  const updatedExperience = resumeData?.education.filter((elem,idx)=>index!==idx);
 
   setResumeData((prev)=>({
     ...prev,
@@ -396,6 +441,17 @@ console.log("FormData is ",resumeData);
 
   
 <form className="max-w-4xl mx-auto px-6 py-8 bg-white rounded-md shadow-md">
+
+{loading && (
+  <div className="flex items-center justify-center gap-2 p-4 text-blue-600 font-medium">
+    <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+    </svg>
+    Parsing resume, please wait...
+  </div>
+)}
+
 {source==="resume"?
     <div className="flex flex-col items-center mx-auto mt-3 w-full max-w-md"  onDragOver={handleDragOver}
     onDragLeave={handleDragLeave}
@@ -461,41 +517,42 @@ console.log("FormData is ",resumeData);
   <div className="mb-8">
     <h3 className="text-xl font-semibold mb-3 mt-6 text-gray-800">Personal Information</h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <input required name="fullName" placeholder="Full Name *" value={resumeData.personalInfo.fullName} className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
-      <input required name="email" placeholder="Email *" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
-      <input name="phone" value={resumeData.personalInfo.phone} placeholder="Phone" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
-      <input name="linkedIn" value={resumeData.personalInfo.linkedIn} placeholder="LinkedIn Profile" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
-      <input name="portfolio" value={resumeData.personalInfo.portfolio} placeholder="Portfolio URL" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
-      <input name="location" value={resumeData.personalInfo.location} placeholder="Location" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
+      <input required name="name" placeholder="Full Name *" value={resumeData?.personalInfo?.name} className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
+      <input required name="email" 
+      value={resumeData?.personalInfo?.email} placeholder="Email *" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
+      <input name="phone" value={resumeData?.personalInfo?.phone} placeholder="Phone" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
+      <input name="linkedIn" value={resumeData?.personalInfo?.linkedIn} placeholder="LinkedIn Profile" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
+      <input name="portfolio" value={resumeData?.personalInfo?.portfolio} placeholder="Portfolio URL" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
+      <input name="location" value={resumeData?.personalInfo?.location} placeholder="Location" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"personalInfo")} />
     </div>
   </div>
 
   {/* Professional Summary */}
   <div className="mb-8">
     <h3 className="text-xl font-semibold mb-4 text-gray-800">Professional Summary</h3>
-    <textarea name="summary" placeholder="Write a brief summary..." value={resumeData.professionalSummary.summary} rows="4" className="w-full border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"professionalSummary")}></textarea>
+    <textarea name="summary" placeholder="Write a brief summary..." value={resumeData?.professionalSummary.summary} rows="4" className="w-full border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,null,"professionalSummary")}></textarea>
   </div>
 
 
   {/* Work Experience */}
   <div className="mb-8">
     <h3 className="text-xl font-semibold mb-4 text-gray-800">Work Experience</h3>
-    {resumeData.workExperience.map((exp, index) => (
+    {resumeData?.workExperience.map((exp, index) => (
       <div key={index} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 border border-gray-200 p-4 rounded-md">
-        <input name={`jobTitle`} value={resumeData.workExperience[index].jobTitle} placeholder="Job Title" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,index,"workExperience")} />
+        <input name={`jobTitle`} value={resumeData?.workExperience[index].jobTitle} placeholder="Job Title" className="border border-gray-300 rounded px-4 py-2" onChange={(e)=>handleChange(e,index,"workExperience")} />
 
-        <input name={`companyName`} placeholder="Company Name" className="border border-gray-300 rounded px-4 py-2" value={resumeData.workExperience[index].companyName} 
+        <input name={`companyName`} placeholder="Company Name" className="border border-gray-300 rounded px-4 py-2" value={resumeData?.workExperience[index].companyName} 
         onChange={(e)=>handleChange(e,index,"workExperience")} />
 
 
-        <input name={`employmentType`} placeholder="Employment Type" className="border border-gray-300 rounded px-4 py-2"  value={resumeData.workExperience[index].employmentType} 
+        <input name={`employmentType`} placeholder="Employment Type" className="border border-gray-300 rounded px-4 py-2"  value={resumeData?.workExperience[index].employmentType} 
             onChange={(e)=>handleChange(e,index,"workExperience")}  />
 
-        <input name={`location`} value={resumeData.workExperience[index].location} placeholder="Location" className="border border-gray-300 rounded px-4 py-2"   onChange={(e)=>handleChange(e,index,"workExperience")} />
+        <input name={`location`} value={resumeData?.workExperience[index].location} placeholder="Location" className="border border-gray-300 rounded px-4 py-2"   onChange={(e)=>handleChange(e,index,"workExperience")} />
 
 
         <input name={`startDate`} type="date"
-        value={resumeData.workExperience[index].startDate} 
+        value={resumeData?.workExperience[index].startDate} 
          placeholder="Start Date" className="border border-gray-300 rounded px-4 py-2"   onChange={(e)=>handleChange(e,index,"workExperience")} />
 
 <input
@@ -503,8 +560,8 @@ console.log("FormData is ",resumeData);
   type="date"
   placeholder="End Date"
   className="border border-gray-300 rounded px-4 py-2"
-  value={resumeData.workExperience[index].endDate}
-  disabled={resumeData.workExperience[index].currentlyWorking}
+  value={resumeData?.workExperience[index].endDate}
+  disabled={resumeData?.workExperience[index].currentlyWorking}
   onChange={(e) => handleChange(e, index, "workExperience")}
 />
 
@@ -514,7 +571,7 @@ console.log("FormData is ",resumeData);
   <input
     type="checkbox"
     name="currentlyWorking"
-    checked={resumeData.workExperience[index].currentlyWorking}
+    checked={resumeData?.workExperience[index].currentlyWorking}
     onChange={(e) => handleChange(e, index, "workExperience")}
     className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
   />
@@ -524,7 +581,7 @@ console.log("FormData is ",resumeData);
 </div>
 
         <textarea name={`responsibilities`} 
-        value={resumeData.workExperience[index].responsibilities}
+        value={resumeData?.workExperience[index].responsibilities}
         placeholder="Responsibilities" rows="2"  onChange={(e) => handleChange(e, index, "workExperience")}
         className="col-span-2 border border-gray-300 rounded px-4 py-2" ></textarea>
 
@@ -548,7 +605,7 @@ console.log("FormData is ",resumeData);
     </div>
   <br />
     <div className="flex flex-wrap gap-2 mt-4">
-  {resumeData.workExperience?.[index]?.skillsUsed?.map((skill, i) => (
+  {resumeData?.workExperience?.[index]?.skillsUsed?.map((skill, i) => (
     <div
       key={i}
       className="flex items-center bg-gray-100 border border-gray-300 rounded px-3 py-1"
@@ -580,7 +637,7 @@ console.log("FormData is ",resumeData);
 
 
 
-  {resumeData.education.map((edu, index) => (
+  {resumeData?.education.map((edu, index) => (
   <div key={index} className="mb-6 border border-gray-300 rounded-lg p-6 shadow-sm">
     <h3 className="text-lg font-semibold mb-4 text-gray-800">Education {index + 1}</h3>
 
@@ -675,7 +732,7 @@ console.log("FormData is ",resumeData);
     </div>
 
     <div className="flex flex-wrap gap-2 mt-4">
-      {resumeData.skills.technical.map((skill, index) => (
+      {resumeData?.skills.technical.map((skill, index) => (
         <div
           key={index}
           className="flex items-center bg-gray-100 border border-gray-300 rounded px-3 py-1"
@@ -714,7 +771,7 @@ console.log("FormData is ",resumeData);
     </div>
 
     <div className="flex flex-wrap gap-2 mt-4">
-      {resumeData.skills.soft.map((skill, index) => (
+      {resumeData?.skills.soft.map((skill, index) => (
         <div
           key={index}
           className="flex items-center bg-gray-100 border border-gray-300 rounded px-3 py-1"
@@ -737,7 +794,7 @@ console.log("FormData is ",resumeData);
 {/* Projects Section */}
 <div className="max-w-4xl mx-auto border border-gray-300 rounded-lg p-6 mb-10 shadow-sm bg-white">
   <h2 className="text-xl font-semibold mb-4">Projects</h2>
-  {resumeData.projects.map((project, index) => (
+  {resumeData?.projects.map((project, index) => (
     <div key={index} className="mb-4 border border-gray-300 p-4 rounded">
       <input type="text" placeholder="Title" value={project.title} onChange={(e) => handleChange(e, index, 'projects')} name="title" className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
       <textarea placeholder="Description" value={project.description} onChange={(e) => handleChange(e, index, 'projects')} name="description" className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
@@ -752,7 +809,7 @@ console.log("FormData is ",resumeData);
 {/* Certifications Section */}
 <div className="max-w-4xl mx-auto border border-gray-300 rounded-lg p-6 mb-10 shadow-sm bg-white">
   <h2 className="text-xl font-semibold mb-4">Certifications & Licenses</h2>
-  {resumeData.certifications.map((cert, index) => (
+  {resumeData?.certifications.map((cert, index) => (
     <div key={index} className="mb-4 border border-gray-300 p-4 rounded">
       <input type="text" placeholder="Certificate Name" name="name" value={cert.name} onChange={(e) => handleChange(e, index, 'certifications')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
       <input type="text" placeholder="Organization" name="organization" value={cert.organization} onChange={(e) => handleChange(e, index, 'certifications')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
@@ -767,7 +824,7 @@ console.log("FormData is ",resumeData);
 {/* Languages Section */}
 <div className="max-w-4xl mx-auto border border-gray-300 rounded-lg p-6 mb-10 shadow-sm bg-white">
   <h2 className="text-xl font-semibold mb-4">Languages</h2>
-  {resumeData.languages.map((lang, index) => (
+  {resumeData?.languages.map((lang, index) => (
     <div key={index} className="mb-4 border border-gray-300 p-4 rounded">
       <input type="text" placeholder="Language" name="name" value={lang.name} onChange={(e) => handleChange(e, index, 'languages')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
       <select name="proficiency" value={lang.proficiency} onChange={(e) => handleChange(e, index, 'languages')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2">
@@ -786,7 +843,7 @@ console.log("FormData is ",resumeData);
 {/* Achievements Section */}
 <div className="max-w-4xl mx-auto border border-gray-300 rounded-lg p-6 mb-10 shadow-sm bg-white">
   <h2 className="text-xl font-semibold mb-4">Achievements / Awards</h2>
-  {resumeData.achievements.map((achieve, index) => (
+  {resumeData?.achievements.map((achieve, index) => (
     <div key={index} className="mb-4 border border-gray-300 p-4 rounded">
       <input type="text" placeholder="Title" name="title" value={achieve.title} onChange={(e) => handleChange(e, index, 'achievements')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
       <textarea placeholder="Description" name="description" value={achieve.description} onChange={(e) => handleChange(e, index, 'achievements')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
@@ -800,7 +857,7 @@ console.log("FormData is ",resumeData);
 {/* Volunteer Work Section */}
 <div className="max-w-4xl mx-auto border border-gray-300 rounded-lg p-6 mb-10 shadow-sm bg-white">
   <h2 className="text-xl font-semibold mb-4">Volunteer Work / Extracurricular</h2>
-  {resumeData.volunteerWork.map((item, index) => (
+  {resumeData?.volunteerWork.map((item, index) => (
     <div key={index} className="mb-4 border border-gray-300 p-4 rounded">
       <input type="text" placeholder="Role" name="role" value={item.role} onChange={(e) => handleChange(e, index, 'volunteerWork')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />
       <input type="text" placeholder="Organization" name="organization" value={item.organization} onChange={(e) => handleChange(e, index, 'volunteerWork')} className="w-full border border-gray-300  px-3 py-2 rounded mb-2" />

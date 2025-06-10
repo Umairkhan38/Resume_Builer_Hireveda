@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link';
+import { FaArrowRightLong } from "react-icons/fa6";
 
 
 function LandingPage() {
@@ -17,7 +18,9 @@ function LandingPage() {
       
       <Link href="/resumeform?source=resume" className="bg-[#000042] hover:[#000042] cursor-pointer text-white font-semibold py-3 px-4 rounded-full transition duration-300">Upload Resume</Link>
 
-      <Link  href="/resumeform" className="bg-gray-200 hover:bg-gray-300 cursor-pointer text-black font-semibold py-3 px-4 rounded-full transition duration-300">Without Resume &rarr;</Link>
+      <Link href="/resumeform" className="bg-gray-200 hover:bg-gray-300 cursor-pointer text-black flex items-center gap-x-2 font-semibold py-3 px-4 rounded-full transition duration-300">
+  Without Resume <FaArrowRightLong /> </Link>
+
         
         </div>
         </div>

@@ -93,7 +93,7 @@ const ResumeDocument = ({ resumeData }) => {
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
-        <Text style={styles.name}>{personalInfo.fullName}</Text>
+        <Text style={styles.name}>{personalInfo.name}</Text>
         <Text style={styles.headline}>
           {personalInfo.jobTitle || "Full Stack Developer"} | {skills.technical?.slice(0, 3)?.join(", ")}
         </Text>
